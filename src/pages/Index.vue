@@ -1,19 +1,17 @@
 <template class="">
-  <q-page class="flex flex-center">.
-    <!-- Right drawer that display all the orders from the selected table order-->
-    <OrderDetail></OrderDetail>
+  <q-page class="flex">.
 
     <div
-    class="col">
+    class="col bg-dark">
       <div
-      class="orderprep row1">
+      class="orderprep" v-if="dataFetched">
         <!-- Right drawer that display all the orders from the selected table order-->
-        <OrderPreparation></OrderPreparation>
+        <OrderPreparation @mesa-servida="served" :key="order.id" v-for="order in prepOrders" :order="order"/>
       </div>
 
-      <div class="orderqueue row2">
+      <div class="orderqueue" v-if="dataFetched">
       <!-- Right drawer that display all the orders from the selected table order-->
-        <OrderQueue></OrderQueue>
+        <OrderQueue @load-dishes="loadDishes" :tableOrders="this.tableOrders"></OrderQueue>
 
       </div>
     </div>
@@ -24,22 +22,67 @@
 import OrderDetail from "components/Detail/OrderDetail";
 import OrderPreparation from "components/Prep/OrderPreparation";
 import OrderQueue from "components/Queue/OrderQueue";
+import axios from "axios";
 export default {
   name: 'PageIndex',
-  components: {OrderQueue, OrderPreparation, OrderDetail}
+  components: {OrderQueue, OrderPreparation},
+  methods: {
+    async fetchData(){
+      let response = await axios.get('http://localhost:8082/kitchenOrders/');
+      this.tableOrders=response.data.orders;
+      for (let i = 0; i < this.tableOrders.length; i++) {
+        let res = await axios.get('http://localhost:8082/requestedDishes/'+this.tableOrders[i].id,
+          {crossDomain: true})
+        this.tableOrders[i].dishes = res.data
+      }
+      this.dataFetched=true
+
+
+    },
+    loadDishes(order){
+      this.prepOrders.push(order)
+      this.tableOrders.forEach(
+        tOrder =>
+      {
+        if(tOrder.id == order.id)
+        {
+          this.tableOrders.splice(this.tableOrders.indexOf(tOrder),1)
+        }
+      })
+    },
+    served(orden){
+      this.prepOrders.forEach(
+        prep => {
+          if (prep.id == orden.id) {
+            this.prepOrders.splice(this.prepOrders.indexOf(prep),1)
+          }
+        })
+    },
+  },
+  data() {
+    return {
+      tableOrders:{},
+      prepOrders:[],
+      dataFetched:false
+    }
+  },
+  created( ) {
+    this.fetchData();
+  }
+
 }
 </script>
 
 <style>
-.row1 {
-  min-height: 66vh;
-  min-width: 100vh;
-  background-color: crimson;
-}
-.row2{
-  min-width: 100px;
-  min-height: 30vh;
-  background-color: #1976D2;
-}
+.orderprep
+  {
+    height:70vh ;
+    background-color: dark;
+  }
+.orderqueue
+  {
+    height: 26.5vh;
+    background-color: #1976D2;
+  }
 
 </style>
